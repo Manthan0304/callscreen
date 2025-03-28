@@ -43,7 +43,6 @@ import java.util.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 
-// Data class to represent a call log entry
 data class CallLogEntry(
     val number: String,
     val name: String?,
@@ -52,7 +51,6 @@ data class CallLogEntry(
     val date: Long
 )
 
-// Data class to represent a contact
 data class Contact(
     val id: String,
     val name: String,
@@ -70,8 +68,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-// Main Phone App Composable
 @Composable
 fun PhoneApp() {
     var selectedTab by remember { mutableStateOf(0) }
@@ -82,11 +78,8 @@ fun PhoneApp() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // Permission granted, can fetch call logs
         }
     }
-
-    // Check and request permissions
     LaunchedEffect(Unit) {
         if (ContextCompat.checkSelfPermission(
                 context,
@@ -139,15 +132,12 @@ fun RecentCallsScreen() {
     var hasPermission by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-
-    // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasPermission = isGranted
     }
 
-    // Check permission status and fetch call logs
     LaunchedEffect(Unit) {
         val permissionStatus = ContextCompat.checkSelfPermission(
             context,
@@ -224,11 +214,9 @@ fun CircleAvatar(text: String, modifier: Modifier = Modifier) {
 fun CallLogItem(call: CallLogEntry) {
     val context = LocalContext.current
 
-    // Determine the display name (show number if contact name is missing or empty)
     val displayName = if (!call.name.isNullOrBlank()) call.name else call.number
     val initial = displayName.take(1)
 
-    // Permission launcher for CALL_PHONE
     val callPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -239,7 +227,6 @@ fun CallLogItem(call: CallLogEntry) {
                 }
                 ContextCompat.startActivity(context, intent, null)
             } catch (e: Exception) {
-                // Handle call initiation error
             }
         }
     }
@@ -259,7 +246,6 @@ fun CallLogItem(call: CallLogEntry) {
                         }
                         ContextCompat.startActivity(context, intent, null)
                     } catch (e: Exception) {
-                        // Handle call initiation error
                     }
                 } else {
                     callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
@@ -320,7 +306,6 @@ fun DialerScreen() {
     var phoneNumber by remember { mutableStateOf("") }
     val context = LocalContext.current
 
-    // Permission launcher for CALL_PHONE
     val callPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -331,20 +316,17 @@ fun DialerScreen() {
                 }
                 ContextCompat.startActivity(context, intent, null)
             } catch (e: Exception) {
-                // Handle call initiation error
             }
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Dialer Pad at bottom
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
         ) {
-            // Phone number display
             Text(
                 text = phoneNumber,
                 fontSize = 32.sp,
@@ -355,7 +337,6 @@ fun DialerScreen() {
                 textAlign = TextAlign.Center
             )
 
-            // Divider
             Divider(
                 modifier = Modifier.padding(bottom = 8.dp),
                 color = MaterialTheme.colorScheme.outlineVariant
@@ -383,7 +364,6 @@ fun DialerScreen() {
                                 }
                                 ContextCompat.startActivity(context, intent, null)
                             } catch (e: Exception) {
-                                // Handle call initiation error
                             }
                         } else {
                             callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
@@ -394,8 +374,6 @@ fun DialerScreen() {
         }
     }
 }
-
-// Dialer Pad Composable
 @Composable
 fun DialerPad(
     onNumberClick: (String) -> Unit,
@@ -433,7 +411,6 @@ fun DialerPad(
             }
         }
 
-        // Delete Button
         item {
             Box(
                 modifier = Modifier
@@ -452,7 +429,6 @@ fun DialerPad(
             }
         }
 
-        // Call Button
         item {
             Box(
                 modifier = Modifier
@@ -473,7 +449,6 @@ fun DialerPad(
     }
 }
 
-// Contacts Screen
 @Composable
 fun ContactsScreen() {
     val context = LocalContext.current
@@ -482,14 +457,12 @@ fun ContactsScreen() {
     var error by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasPermission = isGranted
     }
 
-    // Check permission status and fetch contacts
     LaunchedEffect(Unit) {
         val permissionStatus = ContextCompat.checkSelfPermission(
             context,
@@ -550,7 +523,6 @@ fun ContactItem(contact: Contact) {
     val context = LocalContext.current
     val initial = contact.name.take(1)
 
-    // Permission launcher for CALL_PHONE
     val callPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -562,7 +534,6 @@ fun ContactItem(contact: Contact) {
                     }
                     ContextCompat.startActivity(context, intent, null)
                 } catch (e: Exception) {
-                    // Handle call initiation error
                 }
             }
         }
@@ -584,7 +555,6 @@ fun ContactItem(contact: Contact) {
                             }
                             ContextCompat.startActivity(context, intent, null)
                         } catch (e: Exception) {
-                            // Handle call initiation error
                         }
                     }
                 } else {
@@ -622,7 +592,6 @@ fun ContactItem(contact: Contact) {
     }
 }
 
-// Utility function to fetch call logs
 suspend fun fetchCallLogs(context: Context): List<CallLogEntry> = withContext(Dispatchers.IO) {
     try {
         val callLogs = mutableListOf<CallLogEntry>()
@@ -664,7 +633,6 @@ suspend fun fetchCallLogs(context: Context): List<CallLogEntry> = withContext(Di
     }
 }
 
-// Utility function to fetch contacts
 suspend fun fetchContacts(context: Context): List<Contact> = withContext(Dispatchers.IO) {
     try {
         val contacts = mutableListOf<Contact>()
@@ -700,7 +668,6 @@ suspend fun fetchContacts(context: Context): List<Contact> = withContext(Dispatc
     }
 }
 
-// Utility function to initiate a call6
 private fun initiateCall(context: Context, phoneNumber: String) {
     if (ContextCompat.checkSelfPermission(
             context,
