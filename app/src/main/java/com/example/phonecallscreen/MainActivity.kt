@@ -220,71 +220,121 @@ fun CircleAvatar(text: String, modifier: Modifier = Modifier) {
         )
     }
 }
-
-// Call Log Item Composable
 @Composable
 fun CallLogItem(call: CallLogEntry) {
     val context = LocalContext.current
-    val displayName = call.name ?: call.number
+
+    // Determine the display name (show number if contact name is missing or empty)
+    val displayName = if (!call.name.isNullOrBlank()) call.name else call.number
     val initial = displayName.take(1)
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .clickable {
+    // Permission launcher for CALL_PHONE
+    val callPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            try {
                 val intent = Intent(Intent.ACTION_CALL).apply {
                     data = Uri.parse("tel:${call.number}")
                 }
                 ContextCompat.startActivity(context, intent, null)
-            },
-        verticalAlignment = Alignment.CenterVertically
+            } catch (e: Exception) {
+                // Handle call initiation error
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                if (ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.CALL_PHONE
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    try {
+                        val intent = Intent(Intent.ACTION_CALL).apply {
+                            data = Uri.parse("tel:${call.number}")
+                        }
+                        ContextCompat.startActivity(context, intent, null)
+                    } catch (e: Exception) {
+                        // Handle call initiation error
+                    }
+                } else {
+                    callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
+                }
+            }
     ) {
-        CircleAvatar(
-            text = initial,
-            modifier = Modifier.padding(end = 16.dp)
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = displayName,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CircleAvatar(
+                text = initial,
+                modifier = Modifier.padding(end = 16.dp)
             )
-            Row {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = when (call.type) {
-                        CallLog.Calls.INCOMING_TYPE -> "Incoming"
-                        CallLog.Calls.OUTGOING_TYPE -> "Outgoing"
-                        CallLog.Calls.MISSED_TYPE -> "Missed"
-                        else -> "Unknown"
-                    },
-                    fontSize = 12.sp,
-                    color = when (call.type) {
-                        CallLog.Calls.INCOMING_TYPE -> Color.Green
-                        CallLog.Calls.OUTGOING_TYPE -> Color.Blue
-                        CallLog.Calls.MISSED_TYPE -> Color.Red
-                        else -> Color.Gray
-                    },
-                    modifier = Modifier.padding(end = 8.dp)
+                    text = displayName,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                        .format(Date(call.date)),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row {
+                    Text(
+                        text = when (call.type) {
+                            CallLog.Calls.INCOMING_TYPE -> "Incoming"
+                            CallLog.Calls.OUTGOING_TYPE -> "Outgoing"
+                            CallLog.Calls.MISSED_TYPE -> "Missed"
+                            else -> "Unknown"
+                        },
+                        fontSize = 12.sp,
+                        color = when (call.type) {
+                            CallLog.Calls.INCOMING_TYPE -> Color.Green
+                            CallLog.Calls.OUTGOING_TYPE -> Color.Blue
+                            CallLog.Calls.MISSED_TYPE -> Color.Red
+                            else -> Color.Gray
+                        },
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(
+                        text = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                            .format(Date(call.date)),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
 }
+
 
 // Dialer Screen
 @Composable
 fun DialerScreen() {
     var phoneNumber by remember { mutableStateOf("") }
     val context = LocalContext.current
+
+    // Permission launcher for CALL_PHONE
+    val callPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted && phoneNumber.isNotEmpty()) {
+            try {
+                val intent = Intent(Intent.ACTION_CALL).apply {
+                    data = Uri.parse("tel:$phoneNumber")
+                }
+                ContextCompat.startActivity(context, intent, null)
+            } catch (e: Exception) {
+                // Handle call initiation error
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Dialer Pad at bottom
@@ -322,10 +372,22 @@ fun DialerScreen() {
                 },
                 onCallClick = {
                     if (phoneNumber.isNotEmpty()) {
-                        val intent = Intent(Intent.ACTION_CALL).apply {
-                            data = Uri.parse("tel:$phoneNumber")
+                        if (ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.CALL_PHONE
+                            ) == PackageManager.PERMISSION_GRANTED
+                        ) {
+                            try {
+                                val intent = Intent(Intent.ACTION_CALL).apply {
+                                    data = Uri.parse("tel:$phoneNumber")
+                                }
+                                ContextCompat.startActivity(context, intent, null)
+                            } catch (e: Exception) {
+                                // Handle call initiation error
+                            }
+                        } else {
+                            callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
                         }
-                        ContextCompat.startActivity(context, intent, null)
                     }
                 }
             )
@@ -488,38 +550,73 @@ fun ContactItem(contact: Contact) {
     val context = LocalContext.current
     val initial = contact.name.take(1)
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .clickable {
-                contact.phoneNumber?.let { number ->
+    // Permission launcher for CALL_PHONE
+    val callPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            contact.phoneNumber?.let { number ->
+                try {
                     val intent = Intent(Intent.ACTION_CALL).apply {
                         data = Uri.parse("tel:$number")
                     }
                     ContextCompat.startActivity(context, intent, null)
+                } catch (e: Exception) {
+                    // Handle call initiation error
                 }
-            },
-        verticalAlignment = Alignment.CenterVertically
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                if (ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.CALL_PHONE
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    contact.phoneNumber?.let { number ->
+                        try {
+                            val intent = Intent(Intent.ACTION_CALL).apply {
+                                data = Uri.parse("tel:$number")
+                            }
+                            ContextCompat.startActivity(context, intent, null)
+                        } catch (e: Exception) {
+                            // Handle call initiation error
+                        }
+                    }
+                } else {
+                    callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
+                }
+            }
     ) {
-        CircleAvatar(
-            text = initial,
-            modifier = Modifier.padding(end = 16.dp)
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = contact.name,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CircleAvatar(
+                text = initial,
+                modifier = Modifier.padding(end = 16.dp)
             )
-            contact.phoneNumber?.let { number ->
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = number,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = contact.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                contact.phoneNumber?.let { number ->
+                    Text(
+                        text = number,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -544,12 +641,18 @@ suspend fun fetchCallLogs(context: Context): List<CallLogEntry> = withContext(Di
         )
 
         cursor?.use {
+            val numberIndex = it.getColumnIndex(CallLog.Calls.NUMBER)
+            val nameIndex = it.getColumnIndex(CallLog.Calls.CACHED_NAME)
+            val durationIndex = it.getColumnIndex(CallLog.Calls.DURATION)
+            val typeIndex = it.getColumnIndex(CallLog.Calls.TYPE)
+            val dateIndex = it.getColumnIndex(CallLog.Calls.DATE)
+
             while (it.moveToNext()) {
-                val number = it.getString(0)
-                val name = it.getString(1)
-                val duration = it.getLong(2)
-                val type = it.getInt(3)
-                val date = it.getLong(4)
+                val number = it.getString(numberIndex)
+                val name = it.getString(nameIndex)
+                val duration = it.getLong(durationIndex)
+                val type = it.getInt(typeIndex)
+                val date = it.getLong(dateIndex)
 
                 callLogs.add(CallLogEntry(number, name, duration, type, date))
             }
@@ -594,5 +697,23 @@ suspend fun fetchContacts(context: Context): List<Contact> = withContext(Dispatc
     } catch (e: Exception) {
         e.printStackTrace()
         emptyList()
+    }
+}
+
+// Utility function to initiate a call6
+private fun initiateCall(context: Context, phoneNumber: String) {
+    if (ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CALL_PHONE
+        ) == PackageManager.PERMISSION_GRANTED
+    ) {
+        try {
+            val intent = Intent(Intent.ACTION_CALL).apply {
+                data = Uri.parse("tel:$phoneNumber")
+            }
+            ContextCompat.startActivity(context, intent, null)
+        } catch (e: Exception) {
+            // Handle call initiation error
+        }
     }
 }
